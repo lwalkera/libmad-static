@@ -23,6 +23,8 @@
 # include <unistd.h>
 # include <sys/stat.h>
 # include <sys/mman.h>
+# include <fcntl.h>
+# include <sys/types.h>
 
 # include "mad.h"
 
@@ -40,16 +42,19 @@ static int decode(unsigned char const *, unsigned long);
 int main(int argc, char *argv[])
 {
   struct stat stat;
+  int fd;
   void *fdm;
 
-  if (argc != 1)
+  if (argc != 2)
     return 1;
 
-  if (fstat(STDIN_FILENO, &stat) == -1 ||
+  fd = open(argv[1], O_RDONLY);
+
+  if (fstat(fd, &stat) == -1 ||
       stat.st_size == 0)
     return 2;
 
-  fdm = mmap(0, stat.st_size, PROT_READ, MAP_SHARED, STDIN_FILENO, 0);
+  fdm = mmap(0, stat.st_size, PROT_READ, MAP_SHARED, fd, 0);
   if (fdm == MAP_FAILED)
     return 3;
 
