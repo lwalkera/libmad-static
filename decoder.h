@@ -43,17 +43,21 @@ struct mad_decoder {
 
   int options;
 
+#ifdef USE_ASYNC
   struct {
     long pid;
     int in;
     int out;
   } async;
 
+#else
+
   struct {
     struct mad_stream stream;
     struct mad_frame frame;
     struct mad_synth synth;
-  } *sync;
+  } sync;
+#endif
 
   void *cb_data;
 

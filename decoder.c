@@ -77,11 +77,11 @@ void mad_decoder_init(struct mad_decoder *decoder, void *data,
 
   decoder->options      = 0;
 
+#ifdef USE_ASYNC
   decoder->async.pid    = 0;
   decoder->async.in     = -1;
   decoder->async.out    = -1;
-
-  decoder->sync         = 0;
+#endif
 
   decoder->cb_data      = data;
 
@@ -211,6 +211,7 @@ enum mad_flow send(int fd, void const *message, unsigned int size)
   return result;
 }
 
+#ifdef USE_ASYNC
 static
 enum mad_flow receive(int fd, void **message, unsigned int *size)
 {
@@ -236,9 +237,9 @@ enum mad_flow receive(int fd, void **message, unsigned int *size)
 
     if (*size > 0) {
       if (*message == 0) {
-	*message = malloc(*size);
-	if (*message == 0)
-	  return MAD_FLOW_BREAK;
+        *message = malloc(*size);
+        if (*message == 0)
+          return MAD_FLOW_BREAK;
       }
 
       result = receive_io_blocking(fd, *message, *size);
@@ -260,6 +261,7 @@ enum mad_flow receive(int fd, void **message, unsigned int *size)
 
   return result;
 }
+#endif
 
 static
 enum mad_flow check_message(struct mad_decoder *decoder)
@@ -335,9 +337,12 @@ int run_sync(struct mad_decoder *decoder)
     error_data = &bad_last_frame;
   }
 
-  stream = &decoder->sync->stream;
-  frame  = &decoder->sync->frame;
-  synth  = &decoder->sync->synth;
+#ifndef USE_ASYNC
+  stream = &decoder->sync.stream;
+  frame  = &decoder->sync.frame;
+  synth  = &decoder->sync.synth;
+  memset(&decoder->sync, 0, sizeof(decoder->sync));
+#endif
 
   mad_stream_init(stream);
   mad_frame_init(frame);
@@ -536,28 +541,21 @@ int mad_decoder_run(struct mad_decoder *decoder, enum mad_decoder_mode mode)
   int (*run)(struct mad_decoder *) = 0;
 
   switch (decoder->mode = mode) {
-  case MAD_DECODER_MODE_SYNC:
-    run = run_sync;
-    break;
+    case MAD_DECODER_MODE_SYNC:
+      run = run_sync;
+      break;
 
-  case MAD_DECODER_MODE_ASYNC:
+    case MAD_DECODER_MODE_ASYNC:
 # if defined(USE_ASYNC)
-    run = run_async;
+      run = run_async;
 # endif
-    break;
+      break;
   }
 
   if (run == 0)
     return -1;
 
-  decoder->sync = malloc(sizeof(*decoder->sync));
-  if (decoder->sync == 0)
-    return -1;
-
   result = run(decoder);
-
-  free(decoder->sync);
-  decoder->sync = 0;
 
   return result;
 }

@@ -70,7 +70,7 @@ struct mad_frame {
   int options;				/* decoding options (from stream) */
 
   mad_fixed_t sbsample[2][36][32];	/* synthesis subband filter samples */
-  mad_fixed_t (*overlap)[2][32][18];	/* Layer III block overlap data */
+  mad_fixed_t overlap[2][32][18];	/* Layer III block overlap data */
 };
 
 # define MAD_NCHANNELS(header)		((header)->mode ? 2 : 1)
